@@ -1,16 +1,7 @@
-use axum::{extract::{Path, State}, routing::get, Json, Router,};
-mod db;
+use axum::{routing::get, Router,};
 mod models;
-use models::{Transaction, TransactionRequest, Category, Card};
-use db::TransactionRepo;
-
-use crate::db::TransactionRepository;
-
-
-#[derive(Clone)]
-pub struct AppState {
-    pub repo: TransactionRepo,
-}
+use models::{Transaction, TransactionRequest, Category, Card, TransactionRepo,TransactionRepository, AppState};
+mod routes;
 
 
 #[tokio::main]
@@ -32,8 +23,8 @@ async fn main() {
 
     // build our server and routes
     let app = Router::new()
-        .route("/transactions", get(get_transactions).post(create_transaction))
-        .route("/transactions/{category}", get(get_category))
+        .route("/transactions", get(routes::get_transactions).post(routes::create_transaction))
+        .route("/transactions/{category}", get(routes::get_category))
         .with_state(state);
     //axum handles all error routes
 
@@ -41,18 +32,4 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Server running on http://localhost:3000");
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn get_transactions(State(state): State<AppState>,) -> Json<Vec<Transaction>> {
-    Json(state.repo.get_all())
-}
-
-async fn create_transaction(State(state): State<AppState>, Json(payload ): Json<TransactionRequest>,) -> Json<Transaction> {
-    let transaction = Transaction::new(payload);
-    state.repo.create(transaction.clone());
-    Json(transaction)
-}
-
-async fn get_category(Path(category): Path <Category>, State(state): State<AppState>) -> Json<Vec<Transaction>> {
-    Json(state.repo.get_by_category(category))
 }
